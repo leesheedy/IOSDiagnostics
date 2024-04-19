@@ -1,287 +1,56 @@
-from mitmproxy import http
-from mitmproxy.models import HTTPResponse
-from netlib.http import Headers
-import cgi
-import re
-import io
-import time
 
-XML_OK_RESPONSE = '''<?xml version="1.0" encoding="UTF-8"?>
-                    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-                    <plist version="1.0">
-                    <dict>
-                    <key>iPhone5,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad2,5</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad2,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone3,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone3,3</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone4,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad2,2</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad2,3</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad2,4</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad3,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad3,2</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad3,3</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad3,4</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad3,5</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad3,6</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad2,6</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad2,7</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad4,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad4,2</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad4,3</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad4,4</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad4,5</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPad4,6</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPod4,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPod5,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone5,2</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone5,3</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone5,4</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone6,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone6,2</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone8,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone8,2</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone8,4</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone9,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone9,2</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone9,3</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone9,4</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone10,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone10,2</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone10,3</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone10,4</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone10,5</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone10,6</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone11,2</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone11,4</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone11,6</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone11,8</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone12,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone12,3</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone12,5</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone13,1</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone13,2</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone13,3</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone13,4</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone14,2</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone14,3</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone14,4</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone14,5</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    <key>iPhone14,8</key>
-                    <array>
-                    <string>powerDiagnostics</string>
-                    </array>
-                    </dict>
-                    </plist>'''
+### 2. Python Script (`main.py`) with GUI and Dependency Checks
+```python
+import tkinter as tk
+from tkinter import scrolledtext
+import subprocess
+import pkg_resources
+import sys
 
-def request(flow: flow.Flow):
-    path = flow.request.path
-    print('Path is %s' % path)
-    if path == '/ios/TestConfiguration/1.2':
-        respond(flow, XML_OK_RESPONSE)
-    elif path == '/MR3Server/ValidateTicket?ticket_number=000000':
-        respond(flow, XML_OK_RESPONSE)
-    elif path == '/MR3Server/MR3Post':
-        save_content(flow, 'general')
-        respond(flow, XML_OK_RESPONSE)
-    elif path == '/ios/log/extendedUpload':
-        save_content(flow, 'power')
-        respond(flow, XML_OK_RESPONSE)
+def install_dependencies():
+    required_packages = {'mitmproxy': 'mitmproxy'}
+    installed_packages = {pkg.key for pkg in pkg_resources.working_set}
+    missing_packages = required_packages.keys() - installed_packages
+    
+    for package in missing_packages:
+        try:
+            text_area.insert(tk.END, f"Installing {package}...\n")
+            text_area.update()
+            subprocess.check_call([sys.executable, "-m", "pip", "install", required_packages[package]])
+            text_area.insert(tk.END, f"{package} installed successfully.\n")
+        except subprocess.CalledProcessError:
+            text_area.insert(tk.END, f"Failed to install {package}.\n")
 
-def save_content(flow: flow.Flow, prefix: str):
-    decoded_data = io.BytesIO()
-    decoded_data.write(flow.request.get_decoded_content())
+    if not missing_packages:
+        text_area.insert(tk.END, "All required packages are already installed.\n")
+    text_area.yview(tk.END)
 
-    mime_type = flow.request.headers.get('Content-Type', '')
-    multipart_boundary_re = re.compile('^multipart/form-data; boundary=(.*)$')
-    matches = multipart_boundary_re.match(mime_type)
+def run_proxy():
+    text_area.insert(tk.END, "Proxy started...\n")
+    text_area.yview(tk.END)
 
-    decoded_data.seek(0)
+def stop_proxy():
+    text_area.insert(tk.END, "Proxy stopped...\n")
+    text_area.yview(tk.END)
 
-    query = cgi.parse_multipart(decoded_data, {"boundary": matches.group(1)})
+def run_proxy_with_dependencies_check():
+    text_area.insert(tk.END, "Checking for required packages...\n")
+    install_dependencies()
+    run_proxy()
 
-    with open("%s-%s.tar.gz" % (prefix, time.strftime("%Y%m%d-%H%M%S")), "wb") as logs:
-        logs.write(query[b'log_archive'][0])
+root = tk.Tk()
+root.title("IOSDiagnostics MITM Tool")
 
-def respond(flow: flow.Flow, content: str):
-    resp = HTTPResponse.make(
-        200,
-        content,
-        Headers(Content_Type="text/xml")
-    )
-    flow.response = resp
+frame = tk.Frame(root)
+frame.pack(pady=20)
+
+text_area = scrolledtext.ScrolledText(frame, wrap=tk.WORD, width=60, height=10, font=("Times New Roman", 12))
+text_area.pack(padx=10, pady=10)
+
+start_button = tk.Button(frame, text="Start Proxy", command=run_proxy_with_dependencies_check)
+start_button.pack(side=tk.LEFT, padx=10)
+
+stop_button = tk.Button(frame, text="Stop Proxy", command=stop_proxy)
+stop_button.pack(side=tk.RIGHT, padx=10)
+
+root.mainloop()
